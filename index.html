@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>JSON</title>
+
+		<link href="css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<div class="col-xs-12 col-sm-6">
+					<h2>Available entries</h2>
+					<hr>
+					<div id="entries">
+					</div>
+				</div>
+				<div class="col-xs-12 col-sm-6">
+					<h2>Add new entry:</h2>
+					<hr>
+					<form action="/save.php" id="newEntryForm">
+						<div class="form-group">
+							<label for="name">Name</label>
+							<input type="text" class="form-control" id="name" name="name" placeholder="Name" required>
+						</div>
+						<div class="form-group">
+							<label for="surname">Surname</label>
+							<input type="text" class="form-control" id="surname" name="surname" placeholder="Surname" required>
+						</div>
+						<div class="form-group">
+							<label for="age">Age</label>
+							<input type="number" class="form-control" id="age" name="age" placeholder="Age" required>
+						</div>
+						<div class="form-group">
+							<label for="about">About</label>
+							<textarea class="form-control" id="about" placeholder="Some text about you" name="about" rows="3" required></textarea>
+						</div>
+						<button type="submit" class="btn btn-success">Add entry</button>
+					</form>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript">
+		page = 0;
+		lastPage = 0;
+		$post = function(data){
+			data = JSON.stringify(data);
+			var r = new XMLHttpRequest(); 
+			r.open("POST", "/list.php?page="+page, true);
+			r.onreadystatechange = function () {
+			if (r.readyState != 4 || r.status != 200) return; 
+				response = JSON.parse(r.responseText);
+				window.lastPage = Math.ceil(response.entries/10);
+				$renderEntries(response.data);
+			};
+			r.send(data);
+		}
+		$load = function(page){
+			var r = new XMLHttpRequest(); 
+			r.open("GET", "/list.php?page="+page, true);
+			r.onreadystatechange = function () {
+			if (r.readyState != 4 || r.status != 200) return; 
+				response = JSON.parse(r.responseText);
+				window.lastPage = Math.ceil(response.entries/10);
+				$renderEntries(response.data);
+			};
+			r.send();
+		}
+		$renderEntries = function(data){
+			if(!data.length)return;
+			var entries =document.querySelector('#entries');
+			var html = '';
+			for(i in data)
+			{
+				html+='<div class="col-md-6"><div class="panel panel-primary"><div class="panel-heading"><h3 class="panel-title">'+data[i].name+' '+data[i].surname+' '+data[i].age+'</h3> </div> <div class="panel-body">'+data[i].about+'</div></div></div>';
+			}
+			entries.innerHTML = html;
+			entries.innerHTML+=$renderNavigation();
+			setTimeout(function(){
+				links = document.querySelectorAll("[data-go]");
+					for(i in links){
+						links[i].onclick = function(e){
+						e.preventDefault();
+						$load(this.getAttribute("data-go"));
+						window.page = this.getAttribute("data-go");
+					}
+				}
+				
+			}, 100);
+
+
+		}
+		$renderNavigation = function(){
+			header = '<nav><ul class="pagination">';
+			content = '';
+			if(window.page-1 >= 0)
+			{
+				content+='<li><a href="#" data-go="'+(window.page-1)+'"><span aria-hidden="true">&laquo;</span></a></li>';
+			}
+			start = Number(window.page)<4 ? 0 :(Number(window.page) <= window.lastPage-4 ? Number(window.page)-3 : window.lastPage-7);
+			for(i=start ;i<start+7;i++)
+			{
+				content+='<li '+toogleActive(i)+'><a href="#" data-go="'+i+'">'+(i+1)+'</a></li>';
+			}
+			if(Number(window.page)+1 < window.lastPage)
+			{
+				content+= '<li><a href="#" data-go="'+(Number(window.page)+1)+'"><span aria-hidden="true">&raquo;</span></a></li>';
+			}
+			footer = '</ul></nav>';
+			return header+content+footer;
+		}
+		toogleActive = function(i){
+			if(i == window.page)return 'class="active"';
+			return '';
+		}
+		window.onload = function(){
+			$load(window.page);
+			form = document.querySelector('#newEntryForm');
+			form.onsubmit=function(e){
+				e.preventDefault();
+				fields = form.querySelectorAll(".form-control");
+				data={};
+				for(i=0;i<fields.length;i++){
+					data[fields[i].name]=fields[i].value;
+				}
+				$post(data);
+			}
+				
+				
+		}
+		</script>
+		<!--<script type="text/javascript" src="js/app.js"></script>-->
+	</body>
+</html>
